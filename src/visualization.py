@@ -4,12 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-"""
-Module này chứa các hàm tiện ích cho việc trực quan hóa dữ liệu,
-tuân thủ yêu cầu CHỈ SỬ DỤNG thư viện Matplotlib và Seaborn.
-"""
-
-
 def plot_target_distribution_pie(target_column, ax, title='Phân bố Biến Mục tiêu'):
     """
     Vẽ biểu đồ tròn (Pie Chart) để thể hiện tỷ lệ phần trăm
@@ -31,7 +25,6 @@ def plot_target_distribution_pie(target_column, ax, title='Phân bố Biến M�
            pctdistance=0.85,
            colors=sns.color_palette('pastel')[0:len(labels)])
 
-    # Thêm một vòng tròn ở giữa để tạo thành biểu đồ Donut (cho đẹp hơn)
     centre_circle = plt.Circle((0, 0), 0.70, fc='white')
     ax.add_artist(centre_circle)
 
