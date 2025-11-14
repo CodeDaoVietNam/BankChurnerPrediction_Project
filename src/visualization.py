@@ -32,7 +32,7 @@ def plot_target_distribution_pie(target_column, ax, title='Phân bố Biến M�
     ax.axis('equal')  # Đảm bảo biểu đồ tròn
 
 
-def plot_numerical_distribution(data_column, ax, title='Phân phối Biến số', xlabel='Giá trị'):
+def plot_numerical_distribution(data_column, ax, title='Phân phối Biến số', xlabel='Giá trị',palette = 'viridis'):
     """
     Vẽ biểu đồ histogram kết hợp KDE (Kernel Density Estimate)
     để xem phân phối của một biến số.
@@ -43,10 +43,10 @@ def plot_numerical_distribution(data_column, ax, title='Phân phối Biến số
         title (str): Tiêu đề của biểu đồ.
         xlabel (str): Nhãn cho trục X.
     """
-    sns.histplot(data_column, kde=True, ax=ax, color='skyblue')
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel('Số lượng')
+    sns.histplot(data_column, kde=True, ax=ax, color='skyblue',palette = palette);
+    ax.set_title(title);
+    ax.set_xlabel(xlabel);
+    ax.set_ylabel('Số lượng');
 
 
 def plot_categorical_distribution(data_column, ax, title='Phân phối Biến Phân loại', ylabel='Hạng mục'):
@@ -94,6 +94,7 @@ def plot_correlation_heatmap(corr_matrix, ax, title='Ma trận Tương quan', x_
                 ax=ax,
                 vmin = -1,
                 vmax = 1,
+                linewidth = 1.5,
                 xticklabels=x_labels,
                 yticklabels=y_labels)
 

@@ -219,7 +219,7 @@ def z_score_standard(column_data):
     return (column_data-mean_val)/std_val
 
 #Hàm này dùng để biến đổi nếu dữ lỗi có skew bị lệch
-def log_transformation(column_data):
+def log_transform(column_data):
     return np.log1p(column_data)
 
 
@@ -250,3 +250,28 @@ def one_hot_encoding(column_data):
     for i, category in enumerate(categories):
         ohe_matrix[column_data == category, i] = 1
     return ohe_matrix, categories
+
+
+def calculate_skewness(column_data):
+    """
+    Tính toán độ lệch (skewness) của một cột số (mảng 1D).
+    Bỏ qua các giá trị nan.
+    Công thức: mean(((x - mean) / std)^3)
+    """
+    # Loại bỏ nan để tính toán
+    valid_data = column_data[~np.isnan(column_data)]
+
+    if len(valid_data) == 0:
+        return 0.0
+
+    # Tính các thành phần
+    mean_val = np.mean(valid_data)
+    std_val = np.std(valid_data)
+
+    if std_val == 0:
+        return 0.0  # Không có phương sai, không lệch
+
+    # Tính Z-score cho từng điểm (m^3) và lấy trung bình
+    skew = np.mean(((valid_data - mean_val) / std_val) ** 3)
+
+    return skew
