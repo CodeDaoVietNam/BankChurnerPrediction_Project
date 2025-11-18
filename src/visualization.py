@@ -121,3 +121,96 @@ def plot_scatter(x_data, y_data, ax, title='Biểu đồ Scatter', xlabel='Trụ
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+
+def plot_loss_curve(loss_list, ax, title="Loss Curve"):
+    """
+    loss_list: danh sách loss trong training
+    """
+    ax.plot(loss_list, linewidth=2)
+    ax.set_title(title)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.grid(True, linestyle="--", alpha=0.6)
+
+def plot_feature_importance(weight_vector, feature_names, ax, title="Feature Importance"):
+    """
+    weight_vector: vector trọng số (w)
+    feature_names: danh sách tên feature
+    """
+
+    abs_weights = np.abs(weight_vector)
+    sorted_idx = np.argsort(abs_weights)[::-1]
+
+    sorted_weights = abs_weights[sorted_idx]
+    sorted_features = np.array(feature_names)[sorted_idx]
+
+    sns.barplot(x=sorted_weights, y=sorted_features, ax=ax, palette='Blues_r')
+    ax.set_title(title)
+    ax.set_xlabel("Importance (|weight|)")
+    ax.set_ylabel("Feature")
+
+
+def plot_confusion_matrix(cm, ax, labels=[0,1], title="Confusion Matrix"):
+    """
+    Vẽ confusion matrix với annot đẹp.
+    cm: 2x2 NumPy array
+    """
+    sns.heatmap(cm,
+                annot=True,
+                fmt="d",
+                cmap="Blues",
+                xticklabels=[f"Pred {l}" for l in labels],
+                yticklabels=[f"Actual {l}" for l in labels],
+                ax=ax)
+
+    ax.set_title(title)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+
+def plot_grouped_boxplot(data_columns, labels, target, target_name, ax, title):
+    """
+    Vẽ nhiều boxplot theo từng feature so với biến mục tiêu.
+    data_columns: list np.arrays (các feature)
+    labels: danh sách tên feature
+    target: vector 0/1
+    """
+
+    df_temp = []
+    for col_data, label in zip(data_columns, labels):
+        for v, y in zip(col_data, target):
+            df_temp.append((label, y, v))
+
+    # Chuyển sang mảng NumPy
+    df_temp = np.array(df_temp, dtype=object)
+
+    # seaborn yêu cầu array phải chuyển thành list để tránh lỗi dtype
+    sns.boxplot(
+        x=df_temp[:,0].tolist(),
+        y=df_temp[:,2].astype(float).tolist(),
+        hue=df_temp[:,1].astype(int).tolist(),
+        ax=ax
+    )
+    ax.set_title(title)
+    ax.set_xlabel("Biến số")
+    ax.set_ylabel("Giá trị")
+    ax.legend(title=target_name)
+
+
+def plot_bar_with_ci(categories, rates, ci_lows, ci_highs, ax, title):
+    """
+    Vẽ barplot với error bar (CI) cho tỷ lệ churn.
+    Dùng được cho dữ liệu phân loại đã tính CI thủ công.
+    """
+    ax.bar(categories, rates, color=sns.color_palette("Blues", len(categories)))
+
+    # Vẽ error bar
+    for i in range(len(categories)):
+        ax.errorbar(
+            i, rates[i],
+            yerr=[[rates[i] - ci_lows[i]], [ci_highs[i] - rates[i]]],
+            fmt='o', color='black', capsize=5
+        )
+
+    ax.set_title(title)
+    ax.set_ylabel("Tỷ lệ")
+    plt.setp(ax.get_xticklabels(), rotation=20, ha='right')

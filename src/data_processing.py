@@ -10,6 +10,7 @@ Các hàm xử lý dữ liệu bằng NumPy:
 """
 #==========LOAD DATA============
 import numpy as np
+import math
 #Hàm này để tải dữ liệu từ file BankChurner.csv
 def load_data(file_path):
     """
@@ -275,3 +276,127 @@ def calculate_skewness(column_data):
     skew = np.mean(((valid_data - mean_val) / std_val) ** 3)
 
     return skew
+
+#==================================
+#KIỂM ĐỊNH GIẢ THIẾT THỐNG KÊ     =
+#==================================
+def _norm_cdf(z):
+    """Chuẩn hóa chuẩn (standard normal) CDF, dùng math.erf.
+    Trả về P(Z <= z) với Z ~ N(0,1).
+    """
+    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+def wilson_ci(k, n, alpha=0.05):
+    """
+    Wilson score confidence interval cho tỷ lệ p = k/n.
+    Trả về (low, high).
+    """
+    if n == 0:
+        return (np.nan, np.nan)
+    z = abs(math.sqrt(2)) * math.erf(1 - alpha/2) if False else None
+    def _z_from_alpha(alpha):
+        # ngược lại: z = Phi^{-1}(1 - alpha/2)
+        return math.sqrt(2) * _inv_erf(1 - alpha)
+    def _inv_erf(x, tol=1e-10):
+        # x in (-1,1)
+        a, b = -10.0, 10.0
+        while b - a > tol:
+            m = (a + b) / 2
+            if math.erf(m) < x:
+                a = m
+            else:
+                b = m
+        return (a + b) / 2
+
+    z = _z_from_alpha(alpha)
+    phat = k / n
+    denom = 1 + z*z / n
+    center = (phat + z*z / (2*n)) / denom
+    half = (z * math.sqrt((phat*(1-phat)/n) + (z*z/(4*n*n)))) / denom
+    low = center - half
+    high = center + half
+    # Bound within [0,1]
+    low = max(0.0, low)
+    high = min(1.0, high)
+    return (low, high)
+
+def two_proportion_z_test(k1, n1, k2, n2):
+    """
+    Two-proportion z-test (two-sided).
+    Trả về (z_stat, p_value_two_sided).
+    Công thức:
+      p1 = k1/n1, p2 = k2/n2
+      p_pool = (k1 + k2) / (n1 + n2)
+      se = sqrt(p_pool*(1-p_pool)*(1/n1 + 1/n2))
+      z = (p1 - p2) / se
+    Nếu se == 0 => trả về (np.nan, np.nan)
+    """
+    # Validate
+    if n1 == 0 or n2 == 0:
+        return (np.nan, np.nan)
+
+    p1 = k1 / n1
+    p2 = k2 / n2
+    p_pool = (k1 + k2) / (n1 + n2)
+    se = math.sqrt(p_pool * (1 - p_pool) * (1.0/n1 + 1.0/n2))
+    if se == 0:
+        return (np.nan, np.nan)
+    z = (p1 - p2) / se
+    # two-sided p-value from standard normal
+    p_value = 2 * (1 - _norm_cdf(abs(z)))
+    return (z, p_value)
+
+def summary_proportions_by_group(cat_array, y_array, alpha=0.05):
+    """
+    Cho cat_array (array of group labels, strings or ints) và y_array (0/1),
+    trả về list of dict: [{group, n, churn_count, churn_rate, ci_low, ci_high}, ...]
+    """
+    cat_array = np.asarray(cat_array)
+    y_array = np.asarray(y_array).astype(int)
+    groups = np.unique(cat_array)
+    results = []
+    for g in groups:
+        mask = (cat_array == g)
+        n = int(np.sum(mask))
+        k = int(np.sum(y_array[mask]))
+        rate = k / n if n > 0 else np.nan
+        ci_low, ci_high = wilson_ci(k, n, alpha=alpha)
+        results.append({
+            "group": g,
+            "n": n,
+            "churn_count": k,
+            "churn_rate": rate,
+            "ci_low": ci_low,
+            "ci_high": ci_high
+        })
+    # sort by churn_rate desc
+    results = sorted(results, key=lambda x: x['churn_rate'] if not np.isnan(x['churn_rate']) else -1, reverse=True)
+    return results
+
+def compare_two_groups(cat_array, y_array, g1, g2, alpha=0.05):
+    """
+    So sánh hai nhóm g1 vs g2.
+    Trả về dict chứa counts, rates, ci, z, p.
+    Nếu một nhóm không tồn tại -> trả về None.
+    """
+    cat_array = np.asarray(cat_array)
+    y_array = np.asarray(y_array).astype(int)
+    mask1 = (cat_array == g1)
+    mask2 = (cat_array == g2)
+    n1 = int(np.sum(mask1))
+    n2 = int(np.sum(mask2))
+    if n1 == 0 or n2 == 0:
+        return None
+    k1 = int(np.sum(y_array[mask1]))
+    k2 = int(np.sum(y_array[mask2]))
+    r1 = k1 / n1
+    r2 = k2 / n2
+    ci1 = wilson_ci(k1, n1, alpha)
+    ci2 = wilson_ci(k2, n2, alpha)
+    z, p = two_proportion_z_test(k1, n1, k2, n2)
+    return {
+        "g1": g1, "n1": n1, "k1": k1, "rate1": r1, "ci1": ci1,
+        "g2": g2, "n2": n2, "k2": k2, "rate2": r2, "ci2": ci2,
+        "z": z, "p_value": p
+    }
+
