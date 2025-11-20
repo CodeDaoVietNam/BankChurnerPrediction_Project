@@ -103,6 +103,10 @@ def recall(y_true,y_pred):
     FN = np.sum((y_true == 1) & (y_pred == 0))
     return TP/(TP+FN+1e-13)
 
+def f1_score(y_true, y_pred):
+    p = precision(y_true, y_pred)
+    r = recall(y_true, y_pred)
+    return 2 * p * r / (p + r + 1e-12)
 #====================================
 # Train_test_split & standard scaler=
 #====================================
@@ -120,4 +124,177 @@ def standard_scaler_fit_transform(X):
     std = np.std(X, axis=0)
     std[std==0] = 1
     return (X - mean) / std, mean, std
+
+#==================================
+#       Oversampling (SMOTE)      =
+#==================================
+def smote_numpy(X,y,minority_class = 1 , k = 5, amount = 1.0):
+    X_min = X[y == minority_class]
+    n_min = len(X_min)
+    if n_min == 0:
+        return X,y
+    n_new = int(n_min*amount)
+    if n_new == 0:
+        return X,y
+    dist = np.full((n_min,n_min),np.inf)
+    for i in range(n_min):
+        diff = X_min - X_min[i]
+        dist[i] = np.sqrt(np.sum(diff**2,axis = 1))
+        dist[i,i] = np.inf
+
+    k = min(k,n_min-1)
+    neigh = np.argsort(dist,axis = 1)[:,:k]
+    synthetic = []
+
+    for _ in range(n_new):
+        i = np.random.randint(0,n_min)
+        j = np.random.choice(neigh[i])
+        lam = np.random.rand()
+        synthetic.append(X_min[i]+ lam*(X_min[j]-X_min[i]))
+
+    X_syn = np.array(synthetic)
+    y_syn = np.full(n_new,minority_class)
+
+    return np.vstack([X,X_syn]),np.concatenate([y,y_syn])
+
+#==========================
+#      TRAIN/EVALUATE     =
+#==========================
+def train_and_evaluate(model, X_train, y_train, X_test, y_test):
+    model.fit(X_train, y_train)
+    y_proba = model.predict_proba(X_test)
+    y_pred = model.predict(X_test)
+
+    cm = confusion_matrix(y_test, y_pred)
+
+    return {
+        "model": model,
+        "y_pred": y_pred,
+        "y_pred_proba": y_proba,
+        "confusion_matrix": cm,
+        "accuracy": accuracy(y_test, y_pred),
+        "precision": precision(y_test, y_pred),
+        "recall": recall(y_test, y_pred),
+        "f1": f1_score(y_test, y_pred),
+        "loss_history": model.loss_history,
+    }
+#===========================
+#    FEATURE IMPORTANCE    =
+#===========================
+
+def feature_importance_from_weights(weights_tuple, feature_names):
+    w, b = weights_tuple
+    abs_w = np.abs(w)
+
+    sorted_ids = np.argsort(-abs_w)
+
+    results = []
+    for idx in sorted_ids:
+        results.append((feature_names[idx], w[idx], abs_w[idx]))
+
+    return results
+
+
+# =======================================
+#         PRECISION-RECALL CURVE        =
+# =======================================
+
+def precision_recall_curve_manual(y_true, y_proba):
+
+    order = np.argsort(-y_proba)
+    y_true_sorted = y_true[order]
+    y_proba_sorted = y_proba[order]
+
+    tps = 0
+    fps = 0
+    fn = np.sum(y_true_sorted == 1)
+
+    precisions, recalls, thresholds = [], [], []
+    last_p = None
+
+    for i in range(len(y_proba_sorted)):
+        p_i = y_proba_sorted[i]
+
+        if last_p is not None and p_i != last_p:
+            precision_val = tps / (tps + fps + 1e-12)
+            recall_val = tps / (tps + fn + 1e-12)
+            precisions.append(precision_val)
+            recalls.append(recall_val)
+            thresholds.append(last_p)
+
+        if y_true_sorted[i] == 1:
+            tps += 1
+            fn -= 1
+        else:
+            fps += 1
+
+        last_p = p_i
+
+    precision_val = tps / (tps + fps + 1e-12)
+    recall_val = tps / (tps + fn + 1e-12)
+
+    precisions.append(precision_val)
+    recalls.append(recall_val)
+    thresholds.append(last_p)
+
+    return np.array(thresholds), np.array(precisions), np.array(recalls)
+
+
+def auc_average_precision(recalls, precisions):
+    order = np.argsort(recalls)
+    r = recalls[order]
+    p = precisions[order]
+
+    auc = 0.0
+    for i in range(1, len(r)):
+        delta = r[i] - r[i - 1]
+        auc += p[i] * delta
+    return auc
+
+def k_fold_split(n_samples, k):
+    indices = np.arange(n_samples)
+    folds = []
+    fold_sizes = np.full(k, n_samples // k)
+    fold_sizes[:n_samples % k] += 1
+
+    start = 0
+    for fs in fold_sizes:
+        end = start + fs
+        val_idx = indices[start:end]
+        train_idx = np.concatenate([indices[:start], indices[end:]])
+        folds.append((train_idx, val_idx))
+        start = end
+    return folds
+
+#==============================
+#       CROSS-VAL-SCORE       =
+#==============================
+def cross_val_score_numpy(model_class, X, y, k=5, **model_params):
+    accs, precs, recs, f1s = [], [], [], []
+    folds = k_fold_split(len(y), k)
+
+    for train_idx, val_idx in folds:
+        X_train, X_val = X[train_idx], X[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        model = model_class(**model_params)
+        model.fit(X_train, y_train)
+
+        y_pred = model.predict(X_val)
+
+        accs.append(accuracy(y_val, y_pred))
+        precs.append(precision(y_val, y_pred))
+        recs.append(recall(y_val, y_pred))
+        f1s.append(f1_score(y_val, y_pred))
+
+    return {
+        "mean_acc": float(np.mean(accs)),
+        "mean_precision": float(np.mean(precs)),
+        "mean_recall": float(np.mean(recs)),
+        "mean_f1": float(np.mean(f1s)),
+        "acc_list": accs,
+        "precision_list": precs,
+        "recall_list": recs,
+        "f1_list": f1s,
+    }
 
