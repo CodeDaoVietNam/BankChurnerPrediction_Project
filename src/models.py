@@ -71,7 +71,7 @@ class MyLogisticRegression:
     def predict_proba(self,X):
         return self.sigmoid(np.dot(X,self.w) + self.b)
 
-    def predict(self,X,threshold = 0.5):
+    def predict(self,X,threshold = 0.3):
         return (self.predict_proba(X) >= threshold).astype(int)
 
     def get_weights(self):
@@ -125,37 +125,50 @@ def standard_scaler_fit_transform(X):
     std[std==0] = 1
     return (X - mean) / std, mean, std
 
+def standard_scaler_transform(X, mean, std):
+    std_safe = std.copy()
+    std_safe[std_safe == 0] = 1
+    return (X - mean) / std_safe
 #==================================
 #       Oversampling (SMOTE)      =
 #==================================
-def smote_numpy(X,y,minority_class = 1 , k = 5, amount = 1.0):
+def smote_numpy(X, y, minority_class=1, k=5, amount=1.0, random_state=None):
+    """
+    Improved SMOTE implementation
+    """
+    if random_state is not None:
+        np.random.seed(random_state)
+
     X_min = X[y == minority_class]
     n_min = len(X_min)
+
     if n_min == 0:
-        return X,y
-    n_new = int(n_min*amount)
+        return X, y
+
+    n_new = int(n_min * amount)
     if n_new == 0:
-        return X,y
-    dist = np.full((n_min,n_min),np.inf)
-    for i in range(n_min):
-        diff = X_min - X_min[i]
-        dist[i] = np.sqrt(np.sum(diff**2,axis = 1))
-        dist[i,i] = np.inf
+        return X, y
 
-    k = min(k,n_min-1)
-    neigh = np.argsort(dist,axis = 1)[:,:k]
+    # Vectorized distance calculation
+    from scipy.spatial.distance import cdist
+    dist = cdist(X_min, X_min, metric='euclidean')
+    np.fill_diagonal(dist, np.inf)
+
+    k = min(k, n_min - 1)
+    neigh_indices = np.argsort(dist, axis=1)[:, :k]
+
     synthetic = []
-
     for _ in range(n_new):
-        i = np.random.randint(0,n_min)
-        j = np.random.choice(neigh[i])
+        i = np.random.randint(0, n_min)
+        j = np.random.choice(neigh_indices[i])
         lam = np.random.rand()
-        synthetic.append(X_min[i]+ lam*(X_min[j]-X_min[i]))
+        new_sample = X_min[i] + lam * (X_min[j] - X_min[i])
+        synthetic.append(new_sample)
 
     X_syn = np.array(synthetic)
-    y_syn = np.full(n_new,minority_class)
+    y_syn = np.full(n_new, minority_class)
 
-    return np.vstack([X,X_syn]),np.concatenate([y,y_syn])
+    return np.vstack([X, X_syn]), np.concatenate([y, y_syn])
 
 #==========================
 #      TRAIN/EVALUATE     =
@@ -251,8 +264,11 @@ def auc_average_precision(recalls, precisions):
         auc += p[i] * delta
     return auc
 
-def k_fold_split(n_samples, k):
+def k_fold_split(n_samples, k,shuffle= True,random_state = 42):
     indices = np.arange(n_samples)
+    if shuffle:
+        np.random.seed(random_state)
+        np.random.shuffle(indices)
     folds = []
     fold_sizes = np.full(k, n_samples // k)
     fold_sizes[:n_samples % k] += 1
@@ -271,16 +287,19 @@ def k_fold_split(n_samples, k):
 #==============================
 def cross_val_score_numpy(model_class, X, y, k=5, **model_params):
     accs, precs, recs, f1s = [], [], [], []
-    folds = k_fold_split(len(y), k)
+    folds = k_fold_split(len(y), k, shuffle=True)
 
     for train_idx, val_idx in folds:
         X_train, X_val = X[train_idx], X[val_idx]
         y_train, y_val = y[train_idx], y[val_idx]
+        X_train_balanced, y_train_balanced = smote_numpy(X_train, y_train, amount=3.0)
+        # Scaling
+        X_train_scaled, mean, std = standard_scaler_fit_transform(X_train_balanced)
+        X_val_scaled = standard_scaler_transform(X_val, mean, std)
 
         model = model_class(**model_params)
-        model.fit(X_train, y_train)
-
-        y_pred = model.predict(X_val)
+        model.fit(X_train_scaled, y_train_balanced)  # TRAIN trên scaled data
+        y_pred = model.predict(X_val_scaled,threshold = 0.5)  # PREDICT trên scaled data
 
         accs.append(accuracy(y_val, y_pred))
         precs.append(precision(y_val, y_pred))
@@ -297,4 +316,3 @@ def cross_val_score_numpy(model_class, X, y, k=5, **model_params):
         "recall_list": recs,
         "f1_list": f1s,
     }
-
