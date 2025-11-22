@@ -51,7 +51,9 @@ Vì yêu cầu cài đặt thủ công, tôi sử dụng Logistic Regression v�
 
 **1. Hàm Sigmoid (Activation Function):**
 Chuyển đổi đầu ra tuyến tính thành xác suất (0-1).
+
 $$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+
 Trong đó $z = w \cdot x + b$.
 
 **2. Hàm mất mát (Loss Function - Log Loss):**
@@ -60,6 +62,7 @@ $$J(w,b) = -\frac{1}{m} \sum_{i=1}^{m} [y^{(i)}\log(\hat{y}^{(i)}) + (1-y^{(i)})
 
 **3. Cập nhật trọng số (Gradient Descent):**
 $$w := w - \alpha \frac{\partial J}{\partial w} = w - \alpha \frac{1}{m} X^T (\hat{y} - y)$$
+
 $$b := b - \alpha \frac{\partial J}{\partial b} = b - \alpha \frac{1}{m} \sum (\hat{y} - y)$$
 
 ### Giải thích cách implement bằng NumPy
