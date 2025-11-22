@@ -57,6 +57,17 @@ Dự án được chia thành 3 giai đoạn chính, tương ứng với 3 noteb
     - Huấn luyện mô hình **LogisticRegression** tự xây dựng
     - Đánh giá mô hình bằng các chỉ số **Accuracy, Precision, Recall,F1-score và Confusion Matrix**
 
+## Hướng dẫn sử dụng file `run_all.sh`
+Để chạy file này trên Linux/MacOS hoặc Git Bash (Windows), bạn cần cấp quyền thực thi cho nó trước.
+- **Bước 1**: **Cấp quyền thực thi** Mở terminal tại thư mục gốc của dự án và gõ:
+```bash
+chmod +x run_all.sh
+```
+- **Bước 2**: Chạy Script
+```bash
+./run_all.sh
+```
+
 ## Các phát hiện chính **(Key Insights)**
 Từ quá trình phân tích dữ liệu (EDA), tôi đã rút ra được những góc nhìn sau về bộ dữ liệu này về hành vi của khách hàng :
 1. **Tần suất giao dịch là chìa khóa**: Khách hàng có tổng số giao dich thấp (dưới 40 lần/năm) có nguy cơ rời bỏ rất cao. Khi giao dịch > 60 lần, tỷ lệ rời bỏ gần như bằng 0.
