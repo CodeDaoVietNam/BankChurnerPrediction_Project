@@ -100,8 +100,11 @@ chmod +x run_all.sh
 ## 7. Results (Kết quả)
 **Metrics đạt được trên tập test**
 **Accuracy**: 0.8672260612043435
+
 **Precision**: 0.5319148936170212
+
 **Recall**: 0.8361204013377923
+
 **F1-score**: 0.6501950585170798
 
 **Trực quan hóa và Phân tích**
