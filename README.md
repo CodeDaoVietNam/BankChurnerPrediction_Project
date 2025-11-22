@@ -1,22 +1,119 @@
-# Bank Customer Churn Prediction Project
-**Thực hiện bởi** : Nguyễn Đức Tiến
+# Bank Customer Churn Prediction (Implemented from Scratch with NumPy)
 
-**MSSV**: 23120368
-## Tổng quan dự án (Project Overview)
-Dự án này nhằm mục đích xây dựng một mô hình Machine Learning để dự đoán khả năng rời bỏ (Churn) của khách hàng ngân hàng.
+## 1. Giới thiệu (Introduction)
 
-**Điểm đặc biệt của dự án:**
-Thay vì chỉ sử dụng các thư viện có sẵn như Scikit-Learn, dự án tập trung vào việc **xây dựng thủ công (implementation from scratch)** các thuật toán cốt lõi bằng **NumPy** để hiểu sâu về bản chất toán học bên dưới, bao gồm:
-* Xử lý và làm sạch dữ liệu thủ công.
-* Tính toán thống kê (Skewness, Z-score).
-* Xây dựng mô hình Logistic Regression với thuật toán Gradient Descent.
+### Mô tả bài toán
+Trong lĩnh vực ngân hàng, "Churn" (rời bỏ) là hiện tượng khách hàng ngưng sử dụng dịch vụ. Dự án này tập trung vào việc dự đoán những khách hàng có nguy cơ đóng tài khoản thẻ tín dụng dựa trên dữ liệu hành vi và nhân khẩu học của họ.
 
-## Cấu trúc thư mục (Project Structure)
+### Động lực và Ứng dụng thực tế
+* **Động lực:** Chi phí để tìm kiếm một khách hàng mới thường cao gấp 5-25 lần so với việc giữ chân khách hàng hiện tại.
+* **Ứng dụng:** Giúp ngân hàng chủ động nhận diện khách hàng rủi ro cao để đưa ra các chính sách chăm sóc, khuyến mãi kịp thời nhằm giữ chân họ, tối ưu hóa lợi nhuận.
+
+### Mục tiêu cụ thể
+1.  Xây dựng quy trình xử lý dữ liệu (Data Pipeline) từ thô đến sạch.
+2.  Thực hiện phân tích khám phá (EDA) để tìm ra các yếu tố tác động chính.
+3.  **Xây dựng thuật toán Logistic Regression từ con số 0 (From Scratch)** chỉ sử dụng `NumPy` (không dùng Scikit-learn cho lõi thuật toán) để hiểu sâu bản chất toán học.
+4.  Đạt độ chính xác (Accuracy) và Recall (khả năng phát hiện khách rời bỏ) ở mức chấp nhận được.
+
+## 2. Mục lục (Table of Contents)
+- [Giới thiệu](#1-giới-thiệu-introduction)
+- [Dataset](#3-dataset)
+- [Method (Phương pháp)](#4-method-phương-pháp)
+- [Installation & Setup](#5-installation--setup)
+- [Usage](#6-usage)
+- [Results](#7-results-kết-quả)
+- [Project Structure](#8-project-structure)
+- [Challenges & Solutions](#9-challenges--solutions)
+- [Future Improvements](#10-future-improvements)
+- [Contributors & Author](#11-contributors--author-info)
+- [License](#13-license)
+
+## 3. Dataset
+
+* **Nguồn dữ liệu:** [Kaggle - Credit Card Customers](https://www.kaggle.com/sakshigoyal7/credit-card-customers)
+* **Kích thước:** ~10,000 dòng (mẫu) và 21 cột (đặc trưng).
+* **Đặc điểm:** Dữ liệu bao gồm thông tin nhân khẩu học (Tuổi, Giới tính, Học vấn) và hành vi tiêu dùng (Số giao dịch, Tổng tiền, Dư nợ).
+* **Các Features quan trọng sau khi chọn lọc:**
+    * `Total_Trans_Ct`: Tổng số lần giao dịch (Feature quan trọng nhất).
+    * `Has_Revolving_Bal`: Biến phái sinh, chỉ ra khách hàng có đang nợ tín dụng hay không.
+    * `Contacts_Count_12_mon`: Số lần liên hệ với ngân hàng.
+
+## 4. Method (Phương pháp)
+
+### Quy trình xử lý dữ liệu
+1.  **Preprocessing:** Xử lý Missing Value (Mean cho số, Mode cho chữ, giữ 'Unknown' cho thu nhập).
+2.  **Feature Engineering:** Tạo biến mới (`Avg_Trans_Amount`, `Has_Revolving_Bal`), loại bỏ biến đa cộng tuyến (`Total_Trans_Amt`, `Avg_Utilization_Ratio`).
+3.  **Encoding:** One-Hot Encoding thủ công cho biến phân loại.
+4.  **Scaling:** Z-score Standardization ($\frac{x - \mu}{\sigma}$).
+
+### Thuật toán sử dụng: Logistic Regression
+Vì yêu cầu cài đặt thủ công, tôi sử dụng Logistic Regression với tối ưu hóa bằng Gradient Descent.
+
+**1. Hàm Sigmoid (Activation Function):**
+Chuyển đổi đầu ra tuyến tính thành xác suất (0-1).
+$$\sigma(z) = \frac{1}{1 + e^{-z}}$$
+Trong đó $z = w \cdot x + b$.
+
+**2. Hàm mất mát (Loss Function - Log Loss):**
+Đo lường sai số giữa dự đoán và thực tế.
+$$J(w,b) = -\frac{1}{m} \sum_{i=1}^{m} [y^{(i)}\log(\hat{y}^{(i)}) + (1-y^{(i)})\log(1-\hat{y}^{(i)})]$$
+
+**3. Cập nhật trọng số (Gradient Descent):**
+$$w := w - \alpha \frac{\partial J}{\partial w} = w - \alpha \frac{1}{m} X^T (\hat{y} - y)$$
+$$b := b - \alpha \frac{\partial J}{\partial b} = b - \alpha \frac{1}{m} \sum (\hat{y} - y)$$
+
+### Giải thích cách implement bằng NumPy
+Thay vì dùng vòng lặp (rất chậm), tôi tận dụng khả năng tính toán Vectorization của NumPy:
+* Dùng `np.dot(X, w)` để tính tích vô hướng cho toàn bộ ma trận dữ liệu cùng lúc.
+* Dùng `np.exp()` và tính toán mảng (broadcasting) để tính Sigmoid và Gradient cực nhanh.
+
+## 5. Installation & Setup
+
+Yêu cầu: Python 3.8+
+```bash
+# Clone repository
+git clone https://github.com/CodeDaoVietNam/BankChurnerPrediction_Project.git
+# Di chuyển vào thư mục
+cd bank-churn-project
+
+# Cài đặt thư viện cần thiết
+pip install -r requirements.txt
+```
+
+## 6. Usage
+Bạn có thể chạy toàn bộ dự án bằng script tự động hoặc chạy từng notebook:
+
+### **Cách 1: Chạy tự động (Khuyên dùng)**
+```bash
+# Cấp quyền thực thi (Linux/Mac)
+chmod +x run_all.sh
+
+# Chạy script
+./run_all.sh
+```
+
+### **Cách 2: Chạy từng phần**
+- Mở `notebooks/01_data_exploration.ipynb` để xem thống kê mô tả dữ liệu
+- Mở `notebooks/02_preprocessing.ipynb` để thực hiện làm sạch và EDA
+- Mở `notebooks/03_modeling.ipynb` để huấn luyện và đánh giá mô hình 
+
+## 7. Results (Kết quả)
+**Metrics đạt được trên tập test**
+**Accuracy**: 0.8672260612043435
+**Precision**: 0.5319148936170212
+**Recall**: 0.8361204013377923
+**F1-score**: 0.6501950585170798
+
+**Trực quan hóa và Phân tích**
+- **Phân cụm hành vi:** Biểu đồ scatter plot cho thấy khách hàng có **Tổng số giao dịch < 40** có nguy cơ rời bỏ rất cao
+- **Tác động của nợ**: Nhóm khách hàng không có dư nợ xoay vòng (`Has_Revolving_Bal = 0`) chiếm phần lớn lượng khách rời bỏ.
+
+## 8. Project Structure
 
 ```text
 ├── data/                   # Chứa dữ liệu của dự án
 │   ├── raw/                # Dữ liệu thô ban đầu (BankChurners.csv)
-│   └── processed/          # Dữ liệu đã qua xử lý, mã hóa và file .npy    
+│   └── processed/          # Dữ liệu đã qua xử lý, mã hóa và file .npy
 ├── notebooks/              # Các Jupyter Notebook theo quy trình Data Science
 │   ├── 01_data_exploration.ipynb  # Khám phá sơ bộ dữ liệu
 │   ├── 02_preprocessing.ipynb     # Làm sạch, Feature Engineering & EDA chuyên sâu
@@ -30,58 +127,39 @@ Thay vì chỉ sử dụng các thư viện có sẵn như Scikit-Learn, dự á
 └── README.md               # Tài liệu hướng dẫn
 ```
 
-## Hướng dẫn cài đặt và chạy (Installation & Usage)
+## 9. Challenges & Solutions
+Trong quá trình xây dựng pipeline xử lý dữ liệu thủ công bằng Numpy , tôi đã đối mặt và giải quyết các thách thức sau:
+**A. Trong giai đoạn Tiền xử lý (Preprocessing) & Feature Engineering**
+1. **Khó Khăn: Xử lý giá trị `NaN` trong mảng Numpy số học**
+    - **Mô tả**: Không giống như Pandas có `fillna()`, Numpy thuần túy không hỗ trợ điền giá trị giá trị thiếu một cách thông minh 
+    - **Giải pháp**: Tôi phải sử dụng `np.nanmean` để tính toán bỏ qua giá trị rỗng , sau đó kết hợp kỹ thuật **Boolean Indexing** (`arr[np.isnan(arr)] = mean_val`) để thay thế giá trị một cách vector hóa mà không dùng vòng lặp 
+2. **Khó khắn: Rò rỉ dữ liệu (Data Leakage) khi chuẩn hóa (Scaling)**
+    - **Mô tả**: Một sai lầm tôi gặp phải lúc đầu là tính Mean và Std trên toàn bộ tập dữ liệu (X_full) trước khi chia Train/Test. Điều này khiến thông tin từ tập Test bị "lộ" sang tập Train.
+    - **Giải pháp** Viêt lại quy trình chuẩn hóa: Chỉ tính `Mean` và `Std` dựa trên `X_train` . Sau đó ,dùng đúng 2 giá trị này để biến đổi cho X_test
+3. **Khó khăn: Lỗi toán học khi Log Transform**
+    - **Mô tả**: Khi thực hiện giảm độ lệch (Skewness) cho các cột như `Total_Trans_Amt`, tôi gặp lỗi trả về `-inf`(âm vô cực) do một số dòng có giá trị bằng 0 (vì $\log(0)$ 
+    không xác định).
+    - **Giải pháp**: Chuyển sang sử dụng hàm `np.log1p(x)` (tương đương $\ln(1+x)$) thay vì `np.log(x)`. Việc này giúp xử lý mượt mà các giá trị 0 và giữ nguyên tính chất phân phối.
 
-1. **Cài đặt môi trường**
-Yêu cầu Python 3.8+. Cài đặt các thư viện phụ thuộc:
-```bash
-pip install -r requirements.txt
-```
-2. **Quy trình thực hiện**
-Dự án được chia thành 3 giai đoạn chính, tương ứng với 3 notebook:
-- **Bước 1**: `notebooks/01_data_exploration.ipynb`.
-    - Tải dữ liệu và kiểm tra cấu trúc.
-    - Thống kê mô tả cơ bản.
-- **Bước 2**: `notebooks/02_preprocessing.ipynp` (Quan trọng).
-    - **Cleaning**: Xử lý giá trị thiếu (Mean cho số, Mode cho category data,giữ `Unknown` cho `Income_Category`).
-    - **Feature Engineering**: 
-        - Tạo biến `Avg_Trans_Amount` (Số tiền trung bình/Giao dịch).
-        - Tạo biến `Has_Revolving_Bal` (Trạng thái nợ).
-        - **Feature Selection**: Loại bỏ `Total_Trans_Amt` và `Avg_Utilization_Ratio` để tránh **đa cộng tuyến (Multicollinearity)**.
-    - **Tranformation**: Kiểm tra độ lệch **(Skewness)** và áp dùng **Log Transform**.
-    - **Encoding**: Thực hiện **One_hot_Encoding** cho các biến phân loại có nhiều giá trị khác nhau. 
-    - **EDA**: Phân tích sâu các yếu tố tác động đến Churn **(Scatter plots, Box plots).**
-- **Bước 3**: `notebooks/03_modeling.ipynb`
-    - Chia tập dữ liệu huấn luyện Train/Test **(Tỷ lệ 80/20).**
-    - Chuẩn hóa dữ liệu **(Z_score Scaling)** sử dụng **Numpy.**
-    - Huấn luyện mô hình **LogisticRegression** tự xây dựng
-    - Đánh giá mô hình bằng các chỉ số **Accuracy, Precision, Recall,F1-score và Confusion Matrix**
+**B. Trong giai đoạn xây dựng thuật toán (Modeling with Numpy)**
+1. **Khó khăn: Hiện tượng tràn số (Overflow/Underflow) trong hàm Sigmoid**
+    - **Mô tả**: Với các giá trị $z$ quá lớn hoặc quá nhỏ (ví dụ $z = -1000$), hàm `np.exp(-z)` sẽ trả về `inf`, gây ra lỗi khi chia.
+    - **Giải pháp**: Sử dụng kỹ thuật `np.clip(z, -500, 500)` để giới hạn miền giá trị của $z$ trong khoảng an toàn trước khi đưa vào hàm mũ, đảm bảo tính ổn định số học (Numerical Stability)
+2. **Khó khăn: Kích thước ma trận không khớp (Dimension Mismatch)**
+    - **Mô tả**: Lỗi phổ biến nhất là `ValueError: shapes (m,n) and (k,l) not aligned.` Đặc biệt là vector `y` thường có dạng `(m,)` (mảng 1 chiều) trong khi phép nhân ma trận yêu cầu `(m,1)` (vector cột).
+    - **Giải pháp**: Luôn kiểm tra` X.shape` và `y.shape` trước khi training. Sử dụng `y.reshape(-1, 1)` để ép kiểu về vector cột tường minh.
 
-## Hướng dẫn sử dụng file `run_all.sh`
-Để chạy file này trên Linux/MacOS hoặc Git Bash (Windows), bạn cần cấp quyền thực thi cho nó trước.
-- **Bước 1**: **Cấp quyền thực thi** Mở terminal tại thư mục gốc của dự án và gõ:
-```bash
-chmod +x run_all.sh
-```
-- **Bước 2**: Chạy Script
-```bash
-./run_all.sh
-```
+## 10. Future Improvements
+- Cài đặt thêm thuật toán Random Forest hoặc Neural Network (cũng theo phương pháp from scratch) để so sánh.
+- Xây dựng API đơn giản bằng Flask để deploy mô hình.
 
-## Các phát hiện chính **(Key Insights)**
-Từ quá trình phân tích dữ liệu (EDA), tôi đã rút ra được những góc nhìn sau về bộ dữ liệu này về hành vi của khách hàng :
-1. **Tần suất giao dịch là chìa khóa**: Khách hàng có tổng số giao dich thấp (dưới 40 lần/năm) có nguy cơ rời bỏ rất cao. Khi giao dịch > 60 lần, tỷ lệ rời bỏ gần như bằng 0.
-2. **Trạng thái hoạt động tín dụng**: Khách hàng không có dư nợ xoay vòng (`Total_Revolving_Bal = 0`) có tỷ lệ rời bỏ cao hơn gấp 4 lần so với nhóm có dư nợ.
-3. **Sự thay đổi hành vi**:  Nhóm khách hàng rời bỏ thường có xu hướng giảm mạnh giao dịch trong Q4 so với Q1 (Tỷ lệ `Total_Ct_Chng_Q4_Q1` thấp)
+## 11. Contributors & Author Info
+- Họ và tên : Nguyễn Đức Tiến
+- MSSV: 23120368
+- Lớp/Môn Học: Lập trình cho khoa học dữ liệu 
 
-## Công nghệ sử dụng (Technologies)
-- Ngôn ngữ : Python
-- Thư viện chính: 
-    - `Numpy`: Tính toán ma trân, xây dựng thuật toán Machine Learning, xử lý thống kê 
-    - `Matplotlb`,`Seaborn` : Trực quan hóa dữ liệu 
+## 12. Contact
+Nếu có thắc mắc , vui lòng liên hệ qua email: tiennguyenbungbu1210@gmail.com
 
-## Kết quả mô hình 
-Mô hình LogisticRegression đã đạt được kết quả khá khả quan trên tập dữ liệu kiểm thử (Test set):
-- **Accuracy** (`~85%`)
-- **Recall** (`Churn`) : Đã tối ưu hóa để phát hiện được khách hàng rời bỏ
-- **Confusion Matrix**: Cho thấy khả năng phân tách lớp tốt giữa hai lớp khách hàng 
+## 13. LICENSE
+Dự án được cấp phép theo chuẩn MIT License.
